@@ -1,34 +1,17 @@
-# STAGE 1: The "builder" stage
-# This stage uses a Node.js environment to build our React app.
-FROM node:18-alpine AS builder
-
-# Set the working directory inside the container
+# Example Dockerfile
+FROM node:22-alpine AS build
 WORKDIR /app
 
-# Copy package files first to leverage Docker's layer caching.
-# This step only re-runs if package.json changes.
+# install deps
 COPY package*.json ./
+RUN npm ci
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application source code
+# copy source & build
 COPY . .
-
-# Build the application for production
-# This creates the optimized static files in the 'dist' folder.
 RUN npm run build
 
-# STAGE 2: The "final" stage
-# This stage uses a lightweight Nginx server to serve the static files.
-FROM nginx:stable-alpine
-
-# Copy the built static files from the 'builder' stage
-# into the directory where Nginx serves web content.
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Nginx listens on port 80 by default, so we just expose it.
+# (optional) serve the built files with a tiny web server
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-
-# The command to start Nginx when the container runs.
 CMD ["nginx", "-g", "daemon off;"]
